@@ -82,7 +82,13 @@ export function LiveView({ geo, orient, camera }) {
 
       {err && <p className="note">{err}</p>}
 
-      {(manualOpen || (geo.error && !geo.loc)) && (
+      {geo.slow && !geo.loc && !geo.error && (
+        <p className="tip">
+          没拿到定位(桌面浏览器或室内常见)。在下方输入坐标或点选城市即可继续。
+        </p>
+      )}
+
+      {(manualOpen || (geo.slow && !geo.loc) || (geo.error && !geo.loc)) && (
         <ManualPanel onApply={geo.setManual} />
       )}
 

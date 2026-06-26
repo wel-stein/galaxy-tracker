@@ -1,53 +1,96 @@
-import { useCallback, useState } from 'react'
+import { useCallback, useEffect, useRef, useState } from 'react'
 
 // Wraps the Geolocation API. Exposes the current position, a status string
-// for the diagnostics panel, any error, and a `request()` trigger.
+// for the diagnostics panel, any fatal error, a `slow` hint, and triggers.
+//
+// We deliberately use watchPosition WITHOUT a `timeout` option. The
+// getCurrentPosition `timeout` is what makes the browser throw the
+// "Timeout expired" error when a fix is slow (very common on desktop or
+// indoors). watchPosition instead keeps trying and delivers a position
+// whenever the device finally gets one, so a slow fix never looks like a
+// failure — we just nudge the user toward manual entry in the meantime.
 export function useGeolocation() {
   const [loc, setLoc] = useState(null)
   const [status, setStatus] = useState({ text: '未请求', cls: '' })
   const [error, setError] = useState(null)
+  const [slow, setSlow] = useState(false)
+
+  const watchId = useRef(null)
+  const slowTimer = useRef(null)
+  const gotFix = useRef(false)
+
+  const stopWatch = useCallback(() => {
+    if (watchId.current != null && navigator.geolocation) {
+      navigator.geolocation.clearWatch(watchId.current)
+      watchId.current = null
+    }
+    clearTimeout(slowTimer.current)
+  }, [])
 
   const request = useCallback(() => {
     if (!navigator.geolocation) {
       setStatus({ text: '不支持', cls: 'r' })
-      setError('此浏览器不支持定位 — 请用下方「手动定位」。')
+      setError('此浏览器不支持定位 — 请用下方「手动定位」输入坐标。')
+      setSlow(true)
       return
     }
-    setStatus({ text: '请求中…', cls: 'w' })
-
-    const onOk = (p) => {
-      setLoc({ lat: p.coords.latitude, lon: p.coords.longitude })
-      setStatus({ text: '成功 ✓', cls: 'g' })
-      setError(null)
-    }
-
-    // High-accuracy (GPS) fixes can be slow and frequently time out on
-    // desktop or indoors — the browser reports "Timeout expired". When the
-    // first attempt fails, retry once with coarse, cached positioning, which
-    // is faster and usually succeeds, before falling back to manual entry.
-    const onFail = (err) => {
-      setStatus({ text: '高精度失败,重试中…: ' + err.message, cls: 'w' })
-      navigator.geolocation.getCurrentPosition(onOk, (err2) => {
-        setStatus({ text: '失败: ' + err2.message, cls: 'r' })
-        setError(
-          '无法定位 (' + err2.message + ') — 请用下方「手动定位」输入坐标。',
-        )
-      }, { enableHighAccuracy: false, timeout: 12000, maximumAge: 600000 })
-    }
-
-    navigator.geolocation.getCurrentPosition(onOk, onFail, {
-      enableHighAccuracy: true,
-      timeout: 12000,
-      maximumAge: 60000,
-    })
-  }, [])
-
-  // Manually override the location (used by the "手动定位" panel).
-  const setManual = useCallback((lat, lon) => {
-    setLoc({ lat, lon })
-    setStatus({ text: '手动设置 ✓', cls: 'g' })
+    setStatus({ text: '定位中…', cls: 'w' })
+    setSlow(false)
     setError(null)
-  }, [])
+    gotFix.current = false
 
-  return { loc, status, error, request, setManual }
+    // If no fix arrives within ~8s, reveal the manual option — but as a
+    // gentle hint, not an error. The watch keeps running underneath.
+    clearTimeout(slowTimer.current)
+    slowTimer.current = setTimeout(() => {
+      if (!gotFix.current) {
+        setSlow(true)
+        setStatus({ text: '定位较慢 — 可手动输入坐标', cls: 'w' })
+      }
+    }, 8000)
+
+    if (watchId.current != null) navigator.geolocation.clearWatch(watchId.current)
+    watchId.current = navigator.geolocation.watchPosition(
+      (p) => {
+        gotFix.current = true
+        setLoc({ lat: p.coords.latitude, lon: p.coords.longitude })
+        setStatus({ text: '成功 ✓', cls: 'g' })
+        setError(null)
+        setSlow(false)
+        clearTimeout(slowTimer.current)
+      },
+      (err) => {
+        // Only a permission denial is fatal. TIMEOUT / POSITION_UNAVAILABLE
+        // are transient — watchPosition will keep trying — so we just hint
+        // at manual entry instead of showing the "Timeout expired" error.
+        if (err.code === 1 /* PERMISSION_DENIED */) {
+          stopWatch()
+          setStatus({ text: '权限被拒', cls: 'r' })
+          setError('定位权限被拒 — 请用下方「手动定位」输入坐标。')
+          setSlow(true)
+        } else if (!gotFix.current) {
+          setSlow(true)
+          setStatus({ text: '定位较慢 — 可手动输入坐标', cls: 'w' })
+        }
+      },
+      { enableHighAccuracy: true, maximumAge: 60000 },
+    )
+  }, [stopWatch])
+
+  // Manually override the location (used by the "手动定位" panel/presets).
+  const setManual = useCallback(
+    (lat, lon) => {
+      stopWatch()
+      gotFix.current = true
+      setLoc({ lat, lon })
+      setStatus({ text: '手动设置 ✓', cls: 'g' })
+      setError(null)
+      setSlow(false)
+    },
+    [stopWatch],
+  )
+
+  useEffect(() => stopWatch, [stopWatch])
+
+  return { loc, status, error, slow, request, setManual }
 }
