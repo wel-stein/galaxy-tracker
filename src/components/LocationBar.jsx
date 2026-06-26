@@ -1,4 +1,4 @@
-import { useState } from 'react'
+import { useEffect, useState } from 'react'
 import { ManualPanel } from './ManualPanel'
 
 // Shared location strip used by the map and conditions tabs: shows the
@@ -7,6 +7,12 @@ import { ManualPanel } from './ManualPanel'
 export function LocationBar({ geo }) {
   const [manualOpen, setManualOpen] = useState(false)
   const hasLoc = !!geo.loc
+
+  // Ensure a location request has been kicked off when a tab that needs one
+  // is shown. `request()` is idempotent, so this is a no-op if already done.
+  useEffect(() => {
+    if (!geo.loc) geo.request()
+  }, [geo.loc, geo.request])
 
   return (
     <div className="locbar">
@@ -21,7 +27,11 @@ export function LocationBar({ geo }) {
                 : '定位中…'}
           </div>
         </div>
-        <button className="ghost" style={{ flex: 'none' }} onClick={geo.request}>
+        <button
+          className="ghost"
+          style={{ flex: 'none' }}
+          onClick={() => geo.request(true)}
+        >
           重新定位
         </button>
         <button

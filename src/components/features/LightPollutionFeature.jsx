@@ -56,6 +56,8 @@ export function LightPollutionFeature({ geo }) {
   const mapRef = useRef(null)
   const overlayRef = useRef(null)
   const markerRef = useRef(null)
+  const centeredRef = useRef(false)
+  const lastKeyRef = useRef(null)
   const [opacity, setOpacity] = useState(0.6)
   const [reading, setReading] = useState(null) // {lat,lon,bortle|null,loading}
 
@@ -89,12 +91,20 @@ export function LightPollutionFeature({ geo }) {
     if (overlayRef.current) overlayRef.current.setOpacity(opacity)
   }, [opacity])
 
-  // Center + mark the user's location and read its Bortle class.
+  // Mark the user's location and read its Bortle class. Auto-center only on
+  // the first fix, and only re-sample when the position changes by ~100 m, so
+  // GPS jitter doesn't snap the map back or reload tiles while panning.
   useEffect(() => {
     const map = mapRef.current
     if (!map || !geo.loc) return
     const { lat, lon } = geo.loc
-    map.setView([lat, lon], 8)
+    const key = lat.toFixed(3) + ',' + lon.toFixed(3)
+    if (key === lastKeyRef.current) return
+    lastKeyRef.current = key
+    if (!centeredRef.current) {
+      map.setView([lat, lon], 8)
+      centeredRef.current = true
+    }
     inspect(lat, lon)
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [geo.loc])

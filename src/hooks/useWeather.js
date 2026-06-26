@@ -8,8 +8,14 @@ export function useWeather(loc) {
   const [status, setStatus] = useState('idle') // idle | loading | ok | error
   const [error, setError] = useState(null)
 
+  // Round to ~1 km so the effect only refetches when the location moves
+  // meaningfully — watchPosition emits a new loc object on every GPS tick,
+  // which would otherwise hammer the API.
+  const lat = loc ? Math.round(loc.lat * 100) / 100 : null
+  const lon = loc ? Math.round(loc.lon * 100) / 100 : null
+
   useEffect(() => {
-    if (!loc) return
+    if (lat == null) return
     let cancelled = false
     const controller = new AbortController()
     setStatus('loading')
@@ -17,7 +23,7 @@ export function useWeather(loc) {
 
     const url =
       'https://api.open-meteo.com/v1/forecast' +
-      `?latitude=${loc.lat.toFixed(4)}&longitude=${loc.lon.toFixed(4)}` +
+      `?latitude=${lat}&longitude=${lon}` +
       '&hourly=cloud_cover,temperature_2m,relative_humidity_2m' +
       '&current=cloud_cover,temperature_2m' +
       '&timezone=auto&forecast_days=2'
@@ -42,7 +48,7 @@ export function useWeather(loc) {
       cancelled = true
       controller.abort()
     }
-  }, [loc])
+  }, [lat, lon])
 
   return { data, status, error }
 }

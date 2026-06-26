@@ -1,9 +1,20 @@
-import { useState } from 'react'
+import { Suspense, lazy, useState } from 'react'
 import { TabBar } from './components/TabBar'
 import { CompassFeature } from './components/features/CompassFeature'
-import { LightPollutionFeature } from './components/features/LightPollutionFeature'
-import { ConditionsFeature } from './components/features/ConditionsFeature'
 import { useGeolocation } from './hooks/useGeolocation'
+
+// Code-split the heavier tabs (Leaflet, weather) so the default compass tab
+// loads fast; they're fetched on first visit.
+const LightPollutionFeature = lazy(() =>
+  import('./components/features/LightPollutionFeature').then((m) => ({
+    default: m.LightPollutionFeature,
+  })),
+)
+const ConditionsFeature = lazy(() =>
+  import('./components/features/ConditionsFeature').then((m) => ({
+    default: m.ConditionsFeature,
+  })),
+)
 
 export default function App() {
   const [tab, setTab] = useState('compass')
@@ -13,9 +24,11 @@ export default function App() {
   return (
     <div className="app">
       <main className="wrap">
-        {tab === 'compass' && <CompassFeature geo={geo} />}
-        {tab === 'map' && <LightPollutionFeature geo={geo} />}
-        {tab === 'conditions' && <ConditionsFeature geo={geo} />}
+        <Suspense fallback={<p className="fsub" style={{ paddingTop: 24 }}>加载中…</p>}>
+          {tab === 'compass' && <CompassFeature geo={geo} />}
+          {tab === 'map' && <LightPollutionFeature geo={geo} />}
+          {tab === 'conditions' && <ConditionsFeature geo={geo} />}
+        </Suspense>
       </main>
       <TabBar tab={tab} onChange={setTab} />
     </div>

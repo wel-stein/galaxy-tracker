@@ -18,6 +18,7 @@ export function useGeolocation() {
   const watchId = useRef(null)
   const slowTimer = useRef(null)
   const gotFix = useRef(false)
+  const requestedRef = useRef(false)
 
   const stopWatch = useCallback(() => {
     if (watchId.current != null && navigator.geolocation) {
@@ -27,7 +28,12 @@ export function useGeolocation() {
     clearTimeout(slowTimer.current)
   }, [])
 
-  const request = useCallback(() => {
+  // `force` restarts an active watch (the "重新定位" button); a plain call is
+  // idempotent so multiple tabs can each ensure location without churning the
+  // watch or re-prompting.
+  const request = useCallback((force = false) => {
+    if (!force && requestedRef.current) return
+    requestedRef.current = true
     if (!navigator.geolocation) {
       setStatus({ text: '不支持', cls: 'r' })
       setError('此浏览器不支持定位 — 请用下方「手动定位」输入坐标。')
