@@ -31,7 +31,302 @@ body {
 .wrap {
   max-width: 460px;
   margin: 0 auto;
-  padding: env(safe-area-inset-top) 18px 32px;
+  padding: env(safe-area-inset-top) 18px calc(86px + env(safe-area-inset-bottom));
+}
+
+/* ---- app shell + bottom tab bar ---- */
+.app {
+  min-height: 100vh;
+  min-height: 100dvh;
+}
+.tabbar {
+  position: fixed;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  display: flex;
+  background: #060a1ce6;
+  backdrop-filter: blur(12px);
+  border-top: 1px solid var(--line);
+  padding-bottom: env(safe-area-inset-bottom);
+  z-index: 1000;
+}
+.tabbtn {
+  flex: 1;
+  background: transparent;
+  border: none;
+  color: var(--dim);
+  padding: 10px 4px 12px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 3px;
+  font-size: 11px;
+  letter-spacing: 1px;
+}
+.tabbtn .tabicon {
+  font-size: 18px;
+  line-height: 1;
+}
+.tabbtn.active {
+  color: var(--gold);
+}
+
+/* ---- feature scaffolding ---- */
+.feature {
+  padding-top: 14px;
+}
+.ftitle {
+  font-family: Georgia, serif;
+  font-weight: 500;
+  font-size: 26px;
+  margin: 6px 0 4px;
+}
+.fsub {
+  color: var(--dim);
+  font-size: 13px;
+  margin: 0 0 14px;
+}
+
+/* ---- shared location bar ---- */
+.locbar {
+  margin: 12px 0;
+}
+.locrow {
+  display: flex;
+  gap: 8px;
+  align-items: center;
+}
+.locinfo {
+  flex: 1;
+  background: var(--ink2);
+  border: 1px solid var(--line);
+  border-radius: 12px;
+  padding: 8px 12px;
+}
+.locinfo .l {
+  font-size: 10px;
+  color: var(--dim);
+  letter-spacing: 1px;
+}
+.locinfo .v {
+  font-size: 15px;
+}
+
+/* ---- light pollution map ---- */
+.mapwrap {
+  border: 1px solid var(--line);
+  border-radius: 16px;
+  overflow: hidden;
+}
+.map {
+  width: 100%;
+  height: 340px;
+  background: #05081a;
+}
+.leaflet-container {
+  background: #05081a;
+  font-family: inherit;
+}
+.maprow {
+  margin-top: 12px;
+}
+.opacity {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  font-size: 12px;
+  color: var(--dim);
+}
+.opacity input {
+  flex: 1;
+  accent-color: var(--gold);
+}
+.reading {
+  margin-top: 12px;
+  padding: 12px 14px;
+  background: var(--ink2);
+  border: 1px solid var(--line);
+  border-radius: 12px;
+}
+.rcoord {
+  font-size: 12px;
+  color: var(--dim);
+  margin-bottom: 4px;
+}
+.rval {
+  font-size: 15px;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+.rdesc {
+  flex-basis: 100%;
+  font-size: 12px;
+  color: var(--dim);
+  margin-top: 2px;
+}
+.rdim {
+  color: var(--dim);
+}
+.swatch {
+  display: inline-block;
+  width: 16px;
+  height: 16px;
+  border-radius: 4px;
+  border: 1px solid #ffffff33;
+  flex: none;
+}
+.legend {
+  margin-top: 16px;
+  padding: 12px 14px;
+  background: var(--ink2);
+  border: 1px solid var(--line);
+  border-radius: 12px;
+}
+.legtitle {
+  font-size: 12px;
+  color: var(--goldDeep);
+  letter-spacing: 2px;
+  margin-bottom: 8px;
+}
+.legrow {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 3px 0;
+  font-size: 12px;
+}
+.legcls {
+  width: 24px;
+  color: var(--paper);
+}
+.legname {
+  width: 96px;
+  color: var(--paper);
+}
+.legdesc {
+  flex: 1;
+  color: var(--dim);
+  font-size: 11px;
+}
+
+/* ---- observing conditions ---- */
+.verdict {
+  text-align: center;
+  font-family: Georgia, serif;
+  font-size: 16px;
+  padding: 12px;
+  border-radius: 12px;
+  border: 1px solid var(--line);
+  background: var(--ink2);
+  margin-bottom: 14px;
+}
+.verdict.g {
+  color: var(--found);
+  border-color: var(--found);
+}
+.verdict.w {
+  color: var(--gold);
+  border-color: var(--goldDeep);
+}
+.verdict.r {
+  color: #e88;
+  border-color: #e88;
+}
+.cards {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 12px;
+}
+.card {
+  background: var(--ink2);
+  border: 1px solid var(--line);
+  border-radius: 14px;
+  padding: 14px;
+  margin-bottom: 12px;
+}
+.cards .card {
+  margin-bottom: 0;
+}
+.cardhd {
+  font-size: 11px;
+  color: var(--goldDeep);
+  letter-spacing: 2px;
+  margin-bottom: 10px;
+  display: flex;
+  justify-content: space-between;
+}
+.cardhd-r {
+  color: var(--dim);
+  letter-spacing: 0;
+}
+.moonrow {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+.moonemoji {
+  font-size: 34px;
+  line-height: 1;
+}
+.moonname {
+  font-size: 16px;
+}
+.moonsub {
+  font-size: 12px;
+  color: var(--dim);
+}
+.big {
+  font-size: 30px;
+}
+.twrows {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+.twrow {
+  display: flex;
+  justify-content: space-between;
+  font-size: 13px;
+  padding: 4px 0;
+  border-top: 1px solid #11183a;
+  color: var(--dim);
+}
+.twrow:first-child {
+  border-top: none;
+}
+.twrow.hl {
+  color: var(--paper);
+}
+.twrow.hl .mono {
+  color: var(--found);
+}
+.clouds {
+  display: flex;
+  align-items: flex-end;
+  gap: 3px;
+  height: 70px;
+  padding: 4px 0;
+}
+.cloudcol {
+  flex: 1;
+  height: 100%;
+  display: flex;
+  align-items: flex-end;
+}
+.cloudbar {
+  width: 100%;
+  border-radius: 2px 2px 0 0;
+  min-height: 4px;
+}
+.cloudaxis {
+  display: flex;
+  justify-content: space-between;
+  font-size: 11px;
+  color: var(--dim);
+  margin-top: 6px;
 }
 h1 {
   font-family: Georgia, serif;

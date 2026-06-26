@@ -1,32 +1,23 @@
 import { useState } from 'react'
-import { Intro } from './components/Intro'
-import { LiveView } from './components/LiveView'
+import { TabBar } from './components/TabBar'
+import { CompassFeature } from './components/features/CompassFeature'
+import { LightPollutionFeature } from './components/features/LightPollutionFeature'
+import { ConditionsFeature } from './components/features/ConditionsFeature'
 import { useGeolocation } from './hooks/useGeolocation'
-import { useDeviceOrientation } from './hooks/useDeviceOrientation'
-import { useCamera } from './hooks/useCamera'
 
 export default function App() {
-  const [started, setStarted] = useState(false)
+  const [tab, setTab] = useState('compass')
+  // Location is shared across all three tools.
   const geo = useGeolocation()
-  const orient = useDeviceOrientation()
-  const camera = useCamera()
-
-  // The permission requests must run inside the user-gesture handler
-  // (iOS requires this for DeviceOrientationEvent.requestPermission).
-  const onStart = () => {
-    if (started) return
-    setStarted(true)
-    geo.request()
-    orient.request()
-  }
 
   return (
-    <div className="wrap">
-      {started ? (
-        <LiveView geo={geo} orient={orient} camera={camera} />
-      ) : (
-        <Intro onStart={onStart} />
-      )}
+    <div className="app">
+      <main className="wrap">
+        {tab === 'compass' && <CompassFeature geo={geo} />}
+        {tab === 'map' && <LightPollutionFeature geo={geo} />}
+        {tab === 'conditions' && <ConditionsFeature geo={geo} />}
+      </main>
+      <TabBar tab={tab} onChange={setTab} />
     </div>
   )
 }

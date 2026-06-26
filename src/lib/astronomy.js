@@ -42,25 +42,30 @@ export function gmst(j) {
   return g < 0 ? g + 360 : g
 }
 
-// Convert the Galactic Center's equatorial coordinates to horizontal
-// (altitude/azimuth) for the given observer location and time.
-export function horiz(lat, lon, date) {
+// Convert any equatorial coordinates (RA/Dec in degrees) to horizontal
+// (altitude/azimuth in degrees) for the given observer location and time.
+export function equatorialToHorizontal(ra, dec, lat, lon, date) {
   const j = jd(date)
   const lst = (gmst(j) + lon) % 360
-  const H = ((((lst - GC_RA) % 360) + 360) % 360) * DEG
-  const dec = GC_DEC * DEG
+  const H = ((((lst - ra) % 360) + 360) % 360) * DEG
+  const d = dec * DEG
   const la = lat * DEG
   const alt = Math.asin(
-    Math.sin(dec) * Math.sin(la) +
-      Math.cos(dec) * Math.cos(la) * Math.cos(H),
+    Math.sin(d) * Math.sin(la) + Math.cos(d) * Math.cos(la) * Math.cos(H),
   )
   const A = Math.atan2(
     Math.sin(H),
-    Math.cos(H) * Math.sin(la) - Math.tan(dec) * Math.cos(la),
+    Math.cos(H) * Math.sin(la) - Math.tan(d) * Math.cos(la),
   )
   let az = (A * RAD + 180) % 360
   if (az < 0) az += 360
   return { alt: alt * RAD, az }
+}
+
+// Convert the Galactic Center's equatorial coordinates to horizontal
+// (altitude/azimuth) for the given observer location and time.
+export function horiz(lat, lon, date) {
+  return equatorialToHorizontal(GC_RA, GC_DEC, lat, lon, date)
 }
 
 // Normalize an angle to the range (−180, 180].
