@@ -114,6 +114,19 @@ body {
 }
 
 /* ---- light pollution map ---- */
+.howto {
+  margin: 0 0 14px;
+  padding: 12px 14px 12px 30px;
+  background: var(--ink2);
+  border: 1px solid var(--line);
+  border-radius: 12px;
+  color: var(--dim);
+  font-size: 12.5px;
+  line-height: 1.7;
+}
+.howto li {
+  margin: 0;
+}
 .mapwrap {
   border: 1px solid var(--line);
   border-radius: 16px;

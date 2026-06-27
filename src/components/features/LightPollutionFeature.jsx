@@ -26,31 +26,30 @@ function tilePixel(lat, lon, z) {
 
 // Load the overlay tile under a point and read its color → Bortle class.
 // Resolves to a BORTLE entry, or null if the tile/CORS can't be read.
-function sampleBortle(lat, lon) {
-  return new Promise((resolve) => {
-    const { tx, ty, px, py } = tilePixel(lat, lon, LP_MAX_NATIVE_ZOOM)
-    // Sample via the same-origin proxy so the canvas read isn't tainted.
-    const url = LP_SAMPLE_URL.replace('{z}', LP_MAX_NATIVE_ZOOM)
-      .replace('{x}', tx)
-      .replace('{y}', ty)
-    const img = new Image()
-    img.crossOrigin = 'anonymous'
-    img.onload = () => {
-      try {
-        const c = document.createElement('canvas')
-        c.width = 256
-        c.height = 256
-        const ctx = c.getContext('2d')
-        ctx.drawImage(img, 0, 0)
-        const d = ctx.getImageData(px, py, 1, 1).data
-        resolve(bortleFromPixel(d[0], d[1], d[2], d[3]))
-      } catch {
-        resolve(null) // canvas tainted (no CORS)
-      }
-    }
-    img.onerror = () => resolve(BORTLE[0]) // no tile here ⇒ pristine/ocean
-    img.src = url
-  })
+// Returns a BORTLE entry, or null when the tile genuinely can't be read
+// (so we can show "无法读取" instead of falsely reporting pristine skies).
+// Uses fetch + createImageBitmap so we can distinguish a 204 "no light here"
+// from a real failure, and so the same-origin blob is never canvas-tainted.
+async function sampleBortle(lat, lon) {
+  const { tx, ty, px, py } = tilePixel(lat, lon, LP_MAX_NATIVE_ZOOM)
+  const url = LP_SAMPLE_URL.replace('{z}', LP_MAX_NATIVE_ZOOM)
+    .replace('{x}', tx)
+    .replace('{y}', ty)
+  try {
+    const r = await fetch(url)
+    if (r.status === 204) return BORTLE[0] // no light at all ⇒ darkest skies
+    if (!r.ok) return null // upstream/proxy failure
+    const bmp = await createImageBitmap(await r.blob())
+    const c = document.createElement('canvas')
+    c.width = 256
+    c.height = 256
+    const ctx = c.getContext('2d')
+    ctx.drawImage(bmp, 0, 0)
+    const d = ctx.getImageData(px, py, 1, 1).data
+    return bortleFromPixel(d[0], d[1], d[2], d[3])
+  } catch {
+    return null
+  }
 }
 
 export function LightPollutionFeature({ geo }) {
@@ -60,7 +59,7 @@ export function LightPollutionFeature({ geo }) {
   const markerRef = useRef(null)
   const centeredRef = useRef(false)
   const lastKeyRef = useRef(null)
-  const [opacity, setOpacity] = useState(0.6)
+  const [opacity, setOpacity] = useState(0.75)
   const [reading, setReading] = useState(null) // {lat,lon,bortle|null,loading}
 
   // Initialize the map once.
@@ -131,7 +130,15 @@ export function LightPollutionFeature({ geo }) {
   return (
     <div className="feature">
       <h2 className="ftitle">光污染地图</h2>
-      <p className="fsub">点击地图任意位置查看该处的 Bortle 暗空等级。</p>
+      <p className="fsub">
+        底图叠加 NASA 夜间灯光(VIIRS)。越亮 = 光污染越严重、星空越差。
+      </p>
+
+      <ol className="howto">
+        <li>蓝点是你的位置,地图已自动定位到附近。</li>
+        <li>点击地图任意一点,下方显示该处估算的 Bortle 等级。</li>
+        <li>拖动滑块调节夜间灯光图层的透明度。</li>
+      </ol>
 
       <LocationBar geo={geo} />
 
@@ -141,7 +148,7 @@ export function LightPollutionFeature({ geo }) {
 
       <div className="maprow">
         <label className="opacity">
-          <span>光污染图层</span>
+          <span>夜间灯光</span>
           <input
             type="range"
             min="0"
@@ -170,13 +177,13 @@ export function LightPollutionFeature({ geo }) {
               <div className="rdesc">{reading.bortle.desc}</div>
             </div>
           ) : (
-            <div className="rval rdim">无法读取该点颜色 — 请对照下方图例估算</div>
+            <div className="rval rdim">无法读取该点 — 请对照下方图例估算</div>
           )}
         </div>
       )}
 
       <div className="legend">
-        <div className="legtitle">Bortle 暗空等级图例</div>
+        <div className="legtitle">Bortle 暗空等级参考</div>
         {BORTLE.map((b) => (
           <div className="legrow" key={b.cls}>
             <span className="swatch" style={{ background: b.color }} />

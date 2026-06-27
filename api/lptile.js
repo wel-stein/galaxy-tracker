@@ -1,11 +1,10 @@
-// Same-origin proxy for the light-pollution overlay tiles (David Lorenz World
-// Atlas 2022, hosted on GitHub Pages). Serving the tile from our own origin
-// means the client can draw it to a <canvas> and read pixel colors to
-// estimate the Bortle class without running into cross-origin canvas taint —
-// GitHub Pages does not reliably send CORS headers.
+// Same-origin proxy for the light-pollution overlay tile under an inspected
+// point. Fetches NASA GIBS "Earth at Night" (VIIRS Black Marble) server-side
+// and re-serves it from our origin, so the client can draw it to a <canvas>
+// and read pixel brightness without any cross-origin canvas-taint risk.
 //
-// Only used for the single tile under an inspected point; the map overlay
-// itself is loaded directly (image display does not require CORS).
+// GIBS WMTS uses {z}/{y}/{x} (TileMatrix/TileRow/TileCol) order; the client
+// passes standard z, x (col), y (row).
 
 export default async function handler(req, res) {
   const z = parseInt(req.query.z, 10)
@@ -26,13 +25,13 @@ export default async function handler(req, res) {
     return
   }
 
-  const url = `https://djlorenz.github.io/astronomy/lp2022/overlay/tiles/tile_${z}_${x}_${y}.png`
+  const url =
+    'https://gibs.earthdata.nasa.gov/wmts/epsg3857/best/VIIRS_Black_Marble' +
+    `/default/2016-01-01/GoogleMapsCompatible_Level8/${z}/${y}/${x}.png`
 
   try {
     const upstream = await fetch(url)
     if (!upstream.ok) {
-      // No tile here (ocean / pristine sky). 204 → the <img> fires onerror,
-      // which the client treats as darkest skies.
       res.status(204).end()
       return
     }

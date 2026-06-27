@@ -82,6 +82,7 @@ src/
 ## Data sources (all key-free)
 
 - **Base map**: CartoDB dark tiles
-- **Light pollution**: David Lorenz World Atlas 2022 overlay tiles
+- **Light pollution**: NASA GIBS "Earth at Night" (VIIRS Black Marble) tiles,
+  proxied same-origin via `api/lptile.js` for canvas pixel sampling
 - **Cloud cover**: [Open-Meteo](https://open-meteo.com) (no API key, CORS-enabled)
 - **Sun / moon / twilight**: computed in-browser (no network)
