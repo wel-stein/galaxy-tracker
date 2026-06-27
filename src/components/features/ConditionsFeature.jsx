@@ -1,23 +1,8 @@
 import { useEffect, useMemo, useState } from 'react'
 import { horiz, dir } from '../../lib/astronomy'
-import { sunEvents, moonPhase, fmtClock, offsetFromLon } from '../../lib/sky'
+import { sunEvents, moonPhase, fmtClock, offsetFromLon, gcBestTonight } from '../../lib/sky'
 import { useWeather, cloudCoverBetween } from '../../hooks/useWeather'
 import { LocationBar } from '../LocationBar'
-
-// Sample the Galactic Center's altitude across the dark window to find when
-// it culminates tonight — the best moment to look for the Milky Way core.
-function gcTonight(lat, lon, from, to) {
-  if (!from || !to) return null
-  let best = { alt: -90, t: null, az: 0 }
-  const span = to.getTime() - from.getTime()
-  const steps = 96
-  for (let i = 0; i <= steps; i++) {
-    const t = new Date(from.getTime() + (i / steps) * span)
-    const h = horiz(lat, lon, t)
-    if (h.alt > best.alt) best = { alt: h.alt, t, az: h.az }
-  }
-  return best
-}
 
 function CloudBar({ cover }) {
   const color = cover < 30 ? '#7fe3d4' : cover < 70 ? '#ffce6b' : '#e88'
@@ -52,7 +37,7 @@ export function ConditionsFeature({ geo }) {
     const gcNow = horiz(lat, lon, now)
     const darkFrom = events.astro || events.sunset
     const darkTo = events.astroDawn || events.sunrise
-    const gcBest = gcTonight(lat, lon, darkFrom, darkTo)
+    const gcBest = gcBestTonight(lat, lon, darkFrom, darkTo)
     return { lat, lon, events, moon, gcNow, gcBest, darkFrom, darkTo }
   }, [geo.loc, now, offsetSec])
 

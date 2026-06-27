@@ -1,6 +1,7 @@
-import { useState } from 'react'
+import { useEffect, useState } from 'react'
 import { horiz, dir } from '../lib/astronomy'
 import { computeOverlay, guidance } from '../lib/compass'
+import { sunEvents, gcBestTonight } from '../lib/sky'
 import { useAnimationFrame } from '../hooks/useAnimationFrame'
 import { CompassView } from './CompassView'
 import { Stats } from './Stats'
@@ -18,6 +19,25 @@ export function LiveView({ geo, orient, camera }) {
     status: '等待定位…',
   })
   const [manualOpen, setManualOpen] = useState(false)
+  const [tonight, setTonight] = useState(null)
+
+  // Compute when the Galactic Center culminates tonight (best time to look).
+  // Recomputed only when the location changes by ~1 km, not every frame.
+  const locKey = geo.loc
+    ? geo.loc.lat.toFixed(2) + ',' + geo.loc.lon.toFixed(2)
+    : null
+  useEffect(() => {
+    if (!geo.loc) {
+      setTonight(null)
+      return
+    }
+    const { lat, lon } = geo.loc
+    const offsetSec = -new Date().getTimezoneOffset() * 60
+    const ev = sunEvents(lat, lon, new Date(), offsetSec)
+    const best = gcBestTonight(lat, lon, ev.astro || ev.sunset, ev.astroDawn || ev.sunrise)
+    setTonight(best)
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [locKey])
 
   useAnimationFrame(() => {
     const t = geo.loc
@@ -70,11 +90,18 @@ export function LiveView({ geo, orient, camera }) {
           aligned: overlay.aligned,
         })
         if (!g) return null
+        const bestTxt =
+          tonight && tonight.alt > 0
+            ? `银心今晚最高 ${tonight.alt.toFixed(0)}° @ ${tonight.t.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}`
+            : tonight
+              ? '银心今晚不升出地平线'
+              : null
         return (
           <div className={'guide' + (overlay.aligned ? ' ok' : '')}>
             <div className="guide-label">银河中心现在位于</div>
             <div className="guide-where">{g.where}</div>
             {g.turn && <div className="guide-turn">{g.turn}</div>}
+            {bestTxt && <div className="guide-best">{bestTxt}</div>}
           </div>
         )
       })()}

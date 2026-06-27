@@ -2,7 +2,22 @@
 // Low-precision formulas (Meeus / NOAA), accurate to ~1 minute for rise/set
 // and well within what an observing planner needs.
 
-import { jd, equatorialToHorizontal, DEG, RAD } from './astronomy.js'
+import { jd, equatorialToHorizontal, horiz, DEG, RAD } from './astronomy.js'
+
+// Sample the Galactic Center's altitude across a window (e.g. tonight's dark
+// hours) and return when it culminates and how high — the best time to look.
+export function gcBestTonight(lat, lon, from, to) {
+  if (!from || !to) return null
+  let best = { alt: -90, t: null, az: 0 }
+  const span = to.getTime() - from.getTime()
+  const steps = 96
+  for (let i = 0; i <= steps; i++) {
+    const t = new Date(from.getTime() + (i / steps) * span)
+    const h = horiz(lat, lon, t)
+    if (h.alt > best.alt) best = { alt: h.alt, t, az: h.az }
+  }
+  return best
+}
 
 // --- Sun -----------------------------------------------------------------
 
