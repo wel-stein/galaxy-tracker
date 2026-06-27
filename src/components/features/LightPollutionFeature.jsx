@@ -3,6 +3,7 @@ import L from 'leaflet'
 import 'leaflet/dist/leaflet.css'
 import {
   LP_TILE_URL,
+  LP_SAMPLE_URL,
   LP_MAX_NATIVE_ZOOM,
   BASE_TILE_URL,
   BASE_ATTRIB,
@@ -28,7 +29,8 @@ function tilePixel(lat, lon, z) {
 function sampleBortle(lat, lon) {
   return new Promise((resolve) => {
     const { tx, ty, px, py } = tilePixel(lat, lon, LP_MAX_NATIVE_ZOOM)
-    const url = LP_TILE_URL.replace('{z}', LP_MAX_NATIVE_ZOOM)
+    // Sample via the same-origin proxy so the canvas read isn't tainted.
+    const url = LP_SAMPLE_URL.replace('{z}', LP_MAX_NATIVE_ZOOM)
       .replace('{x}', tx)
       .replace('{y}', ty)
     const img = new Image()

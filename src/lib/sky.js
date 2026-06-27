@@ -35,13 +35,41 @@ export const SUN_EVENTS = [
   { key: 'sunrise', label: '日出', alt: -0.833, dir: 'up' },
 ]
 
+// Fallback UTC offset (seconds) estimated from longitude, ~1 hour / 15°.
+export function offsetFromLon(lon) {
+  return Math.round(lon / 15) * 3600
+}
+
+// Format an absolute instant as HH:MM in the location's timezone (given its
+// UTC offset in seconds), independent of the device's timezone.
+export function fmtClock(date, offsetSec) {
+  if (!date) return '—'
+  const d = new Date(date.getTime() + offsetSec * 1000)
+  const h = String(d.getUTCHours()).padStart(2, '0')
+  const m = String(d.getUTCMinutes()).padStart(2, '0')
+  return `${h}:${m}`
+}
+
 // Find the times (Date) of sun-altitude threshold crossings across a window.
 // We sample altitude every `stepMin` minutes and linearly interpolate the
 // crossing — robust at any latitude without solving Kepler's equation.
-export function sunEvents(lat, lon, around = new Date(), stepMin = 5) {
-  // Window: local noon today → local noon tomorrow, so a whole night fits.
-  const start = new Date(around)
-  start.setHours(12, 0, 0, 0)
+//
+// The window is anchored to the LOCATION's local noon (via offsetSec) so the
+// right night is covered no matter the device timezone. Returned values are
+// absolute Date instants.
+export function sunEvents(lat, lon, around = new Date(), offsetSec = null, stepMin = 5) {
+  const off = offsetSec == null ? offsetFromLon(lon) : offsetSec
+  // Location-local civil date of `around`, then its 12:00 local as an instant.
+  const local = new Date(around.getTime() + off * 1000)
+  const localNoonUTC = Date.UTC(
+    local.getUTCFullYear(),
+    local.getUTCMonth(),
+    local.getUTCDate(),
+    12,
+    0,
+    0,
+  )
+  const start = new Date(localNoonUTC - off * 1000)
   const samples = []
   const steps = (24 * 60) / stepMin
   for (let i = 0; i <= steps; i++) {
@@ -68,26 +96,48 @@ export function sunEvents(lat, lon, around = new Date(), stepMin = 5) {
 // --- Moon ----------------------------------------------------------------
 
 const SYNODIC = 29.530588853 // mean synodic month, days
-const KNOWN_NEW_MOON = 2451550.1 // JD of new moon 2000-01-06
 
+// Phase names keyed by elongation (Sun→Moon, degrees): 0 new, 90 first
+// quarter, 180 full, 270 last quarter.
 const PHASE_NAMES = [
-  { max: 0.02, name: '新月', emoji: '🌑' },
-  { max: 0.24, name: '娥眉月', emoji: '🌒' },
-  { max: 0.26, name: '上弦月', emoji: '🌓' },
-  { max: 0.49, name: '盈凸月', emoji: '🌔' },
-  { max: 0.52, name: '满月', emoji: '🌕' },
-  { max: 0.74, name: '亏凸月', emoji: '🌖' },
-  { max: 0.76, name: '下弦月', emoji: '🌗' },
-  { max: 0.98, name: '残月', emoji: '🌘' },
-  { max: 1.01, name: '新月', emoji: '🌑' },
+  { max: 7, name: '新月', emoji: '🌑' },
+  { max: 83, name: '娥眉月', emoji: '🌒' },
+  { max: 97, name: '上弦月', emoji: '🌓' },
+  { max: 173, name: '盈凸月', emoji: '🌔' },
+  { max: 187, name: '满月', emoji: '🌕' },
+  { max: 263, name: '亏凸月', emoji: '🌖' },
+  { max: 277, name: '下弦月', emoji: '🌗' },
+  { max: 353, name: '残月', emoji: '🌘' },
+  { max: 361, name: '新月', emoji: '🌑' },
 ]
 
-// Moon phase: synodic age, illuminated fraction, name, and waxing flag.
+// Moon phase from the geocentric Sun→Moon elongation. Uses the Moon's mean
+// anomaly and the main periodic longitude terms (Meeus, low precision), so
+// the illuminated fraction is accurate to ~1% rather than assuming a uniform
+// synodic cycle.
 export function moonPhase(date) {
-  const age = (((jd(date) - KNOWN_NEW_MOON) % SYNODIC) + SYNODIC) % SYNODIC
-  const frac = age / SYNODIC // 0=new, 0.5=full
-  const illum = (1 - Math.cos(2 * Math.PI * frac)) / 2
-  const waxing = frac < 0.5
-  const phase = PHASE_NAMES.find((p) => frac < p.max) || PHASE_NAMES[0]
-  return { age, illum, waxing, name: phase.name, emoji: phase.emoji }
+  const d = jd(date) - 2451545.0
+  // Sun apparent ecliptic longitude.
+  const Msun = (357.529 + 0.98560028 * d) * DEG
+  const Lsun0 = 280.459 + 0.98564736 * d
+  const lambdaSun =
+    Lsun0 + 1.915 * Math.sin(Msun) + 0.02 * Math.sin(2 * Msun)
+  // Moon longitude (main terms).
+  const Lp = 218.316 + 13.176396 * d // mean longitude
+  const Mp = (134.963 + 13.064993 * d) * DEG // mean anomaly
+  const D = (297.8502 + 12.1907492 * d) * DEG // mean elongation
+  const moonLong =
+    Lp +
+    6.289 * Math.sin(Mp) +
+    1.274 * Math.sin(2 * D - Mp) +
+    0.658 * Math.sin(2 * D) +
+    0.214 * Math.sin(2 * Mp) -
+    0.186 * Math.sin(Msun)
+
+  let elong = (((moonLong - lambdaSun) % 360) + 360) % 360 // 0=new..180=full
+  const illum = (1 - Math.cos(elong * DEG)) / 2
+  const waxing = elong < 180
+  const age = (elong / 360) * SYNODIC
+  const phase = PHASE_NAMES.find((p) => elong < p.max) || PHASE_NAMES[0]
+  return { age, illum, waxing, elong, name: phase.name, emoji: phase.emoji }
 }

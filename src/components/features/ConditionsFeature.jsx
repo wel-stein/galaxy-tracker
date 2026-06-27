@@ -1,11 +1,8 @@
 import { useEffect, useMemo, useState } from 'react'
 import { horiz, dir } from '../../lib/astronomy'
-import { sunEvents, moonPhase } from '../../lib/sky'
+import { sunEvents, moonPhase, fmtClock, offsetFromLon } from '../../lib/sky'
 import { useWeather, cloudCoverBetween } from '../../hooks/useWeather'
 import { LocationBar } from '../LocationBar'
-
-const fmtTime = (d) =>
-  d ? d.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }) : '—'
 
 // Sample the Galactic Center's altitude across the dark window to find when
 // it culminates tonight — the best moment to look for the Milky Way core.
@@ -40,17 +37,24 @@ export function ConditionsFeature({ geo }) {
     return () => clearInterval(id)
   }, [])
 
+  // Location's UTC offset: prefer Open-Meteo's value, else estimate from
+  // longitude — so all times below read in the location's local clock.
+  const offsetSec =
+    weather.data?.utc_offset_seconds ??
+    (geo.loc ? offsetFromLon(geo.loc.lon) : 0)
+  const fmtTime = (d) => fmtClock(d, offsetSec)
+
   const calc = useMemo(() => {
     if (!geo.loc) return null
     const { lat, lon } = geo.loc
-    const events = sunEvents(lat, lon, now)
+    const events = sunEvents(lat, lon, now, offsetSec)
     const moon = moonPhase(now)
     const gcNow = horiz(lat, lon, now)
     const darkFrom = events.astro || events.sunset
     const darkTo = events.astroDawn || events.sunrise
     const gcBest = gcTonight(lat, lon, darkFrom, darkTo)
     return { lat, lon, events, moon, gcNow, gcBest, darkFrom, darkTo }
-  }, [geo.loc, now])
+  }, [geo.loc, now, offsetSec])
 
   if (!geo.loc) {
     return (
@@ -65,7 +69,7 @@ export function ConditionsFeature({ geo }) {
   const { events, moon, gcNow, gcBest, darkFrom, darkTo } = calc
   const clouds =
     weather.status === 'ok'
-      ? cloudCoverBetween(weather.data, darkFrom || now, darkTo || now)
+      ? cloudCoverBetween(weather.data, darkFrom || now, darkTo || now, offsetSec)
       : []
   const avgCloud = clouds.length
     ? Math.round(clouds.reduce((s, c) => s + c.cover, 0) / clouds.length)
@@ -125,7 +129,9 @@ export function ConditionsFeature({ geo }) {
 
       {/* Twilight timeline */}
       <div className="card">
-        <div className="cardhd">日落与暮光</div>
+        <div className="cardhd">
+          日落与暮光<span className="cardhd-r mono">当地时间</span>
+        </div>
         <div className="twrows">
           <div className="twrow"><span>日落</span><span className="mono">{fmtTime(events.sunset)}</span></div>
           <div className="twrow"><span>民用暮光终 −6°</span><span className="mono">{fmtTime(events.civil)}</span></div>

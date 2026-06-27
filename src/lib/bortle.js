@@ -8,6 +8,9 @@
 
 export const LP_TILE_URL =
   'https://djlorenz.github.io/astronomy/lp2022/overlay/tiles/tile_{z}_{x}_{y}.png'
+// Same-origin proxy used only for pixel-sampling (see api/lptile.js), so the
+// canvas read isn't blocked by missing CORS headers on GitHub Pages.
+export const LP_SAMPLE_URL = '/api/lptile?z={z}&x={x}&y={y}'
 export const LP_MAX_NATIVE_ZOOM = 8
 
 // CartoDB dark base map fits the night theme (free, no key).

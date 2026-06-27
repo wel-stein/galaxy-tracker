@@ -54,12 +54,15 @@ export function useWeather(loc) {
 }
 
 // Pick the cloud-cover values for the hours of tonight's dark window
-// (between two Date bounds) from an Open-Meteo hourly response.
-export function cloudCoverBetween(data, from, to) {
+// (between two absolute Date bounds) from an Open-Meteo hourly response.
+// Open-Meteo (timezone=auto) returns local timestamps with no offset marker,
+// so we convert each to an absolute instant using the location's offset
+// before comparing — keeping it correct regardless of the device timezone.
+export function cloudCoverBetween(data, from, to, offsetSec = 0) {
   if (!data?.hourly?.time || !data.hourly.cloud_cover) return []
   const out = []
   data.hourly.time.forEach((iso, i) => {
-    const t = new Date(iso)
+    const t = new Date(new Date(iso + 'Z').getTime() - offsetSec * 1000)
     if (t >= from && t <= to) {
       out.push({ t, cover: data.hourly.cloud_cover[i] })
     }
