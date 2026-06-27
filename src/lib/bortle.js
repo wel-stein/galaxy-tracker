@@ -11,11 +11,16 @@ const GIBS =
   'https://gibs.earthdata.nasa.gov/wmts/epsg3857/best/VIIRS_Black_Marble' +
   '/default/2016-01-01/GoogleMapsCompatible_Level8'
 
-export const LP_TILE_URL = `${GIBS}/{z}/{y}/{x}.png`
-// Same-origin proxy used for pixel-sampling (see api/lptile.js) so the canvas
-// read is guaranteed readable regardless of upstream CORS.
-export const LP_SAMPLE_URL = '/api/lptile?z={z}&x={x}&y={y}'
+// Both the overlay and the pixel-sampling go through our same-origin proxy
+// (see api/lptile.js). That resolves the upstream URL/format server-side
+// (where there's network access) and guarantees the sampled tile is readable
+// (no cross-origin canvas taint).
+export const LP_TILE_URL = '/api/lptile?z={z}&x={x}&y={y}'
+export const LP_SAMPLE_URL = LP_TILE_URL
 export const LP_MAX_NATIVE_ZOOM = 8
+
+// Direct GIBS template (kept for reference / non-proxied environments).
+export const GIBS_DIRECT_URL = `${GIBS}/{z}/{y}/{x}.png`
 
 // CartoDB dark base map fits the night theme (free, no key).
 export const BASE_TILE_URL =
@@ -37,6 +42,23 @@ export const BORTLE = [
   { cls: 8, color: '#ff8fb0', name: '城市天空', desc: '天空泛光,星座难辨' },
   { cls: 9, color: '#ffffff', name: '市中心', desc: '仅见月亮、行星和最亮的星' },
 ]
+
+// Web-Mercator lat/lon → tile (x,y) + in-tile pixel (px,py) at a given zoom.
+export function lonLatToTilePixel(lat, lon, z) {
+  const n = 2 ** z
+  const xf = ((lon + 180) / 360) * n
+  const latRad = (lat * Math.PI) / 180
+  const yf =
+    ((1 - Math.log(Math.tan(latRad) + 1 / Math.cos(latRad)) / Math.PI) / 2) * n
+  const tx = Math.floor(xf)
+  const ty = Math.floor(yf)
+  return {
+    tx,
+    ty,
+    px: Math.floor((xf - tx) * 256),
+    py: Math.floor((yf - ty) * 256),
+  }
+}
 
 // Upper luminance bound (0–255) mapping VIIRS night-light brightness to each
 // Bortle class. Heuristic but directionally correct: dark ⇒ class 1, a bright

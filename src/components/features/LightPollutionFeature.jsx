@@ -9,23 +9,10 @@ import {
   BASE_ATTRIB,
   BORTLE,
   bortleFromPixel,
+  lonLatToTilePixel as tilePixel,
 } from '../../lib/bortle'
 import { LocationBar } from '../LocationBar'
 
-// Web-Mercator lat/lon → tile + in-tile pixel at a given zoom.
-function tilePixel(lat, lon, z) {
-  const n = 2 ** z
-  const x = ((lon + 180) / 360) * n
-  const latRad = (lat * Math.PI) / 180
-  const y =
-    ((1 - Math.log(Math.tan(latRad) + 1 / Math.cos(latRad)) / Math.PI) / 2) * n
-  const tx = Math.floor(x)
-  const ty = Math.floor(y)
-  return { tx, ty, px: Math.floor((x - tx) * 256), py: Math.floor((y - ty) * 256) }
-}
-
-// Load the overlay tile under a point and read its color → Bortle class.
-// Resolves to a BORTLE entry, or null if the tile/CORS can't be read.
 // Returns a BORTLE entry, or null when the tile genuinely can't be read
 // (so we can show "无法读取" instead of falsely reporting pristine skies).
 // Uses fetch + createImageBitmap so we can distinguish a 204 "no light here"
@@ -59,7 +46,9 @@ export function LightPollutionFeature({ geo }) {
   const markerRef = useRef(null)
   const centeredRef = useRef(false)
   const lastKeyRef = useRef(null)
+  const overlayOkRef = useRef(false)
   const [opacity, setOpacity] = useState(0.75)
+  const [overlayStatus, setOverlayStatus] = useState('loading') // loading|ok|error
   const [reading, setReading] = useState(null) // {lat,lon,bortle|null,loading}
 
   // Initialize the map once.
@@ -75,6 +64,16 @@ export function LightPollutionFeature({ geo }) {
     }).addTo(map)
     overlayRef.current = overlay
     mapRef.current = map
+
+    // Surface whether the night-lights overlay actually loads, so a bad tile
+    // source shows a clear message instead of a silent blank map.
+    overlay.on('tileload', () => {
+      overlayOkRef.current = true
+      setOverlayStatus('ok')
+    })
+    overlay.on('tileerror', () => {
+      if (!overlayOkRef.current) setOverlayStatus('error')
+    })
 
     map.on('click', (e) => inspect(e.latlng.lat, e.latlng.lng))
 
@@ -158,6 +157,9 @@ export function LightPollutionFeature({ geo }) {
             onChange={(e) => setOpacity(parseFloat(e.target.value))}
           />
         </label>
+        {overlayStatus === 'error' && (
+          <p className="note">夜间灯光图层加载失败 — 仅显示底图。</p>
+        )}
       </div>
 
       {reading && (
