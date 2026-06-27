@@ -525,6 +525,53 @@ button {
   font-size: 18px;
 }
 
+/* marker label inside the viewport */
+.marker-label {
+  position: absolute;
+  transform: translate(-50%, -150%);
+  font-size: 11px;
+  font-family: Georgia, serif;
+  white-space: nowrap;
+  text-shadow: 0 0 6px #000, 0 0 6px #000;
+  pointer-events: none;
+}
+
+/* plain-language guidance card under the viewport */
+.guide {
+  margin-top: 14px;
+  padding: 14px 16px;
+  text-align: center;
+  background: var(--ink2);
+  border: 1px solid var(--line);
+  border-radius: 14px;
+}
+.guide.ok {
+  border-color: var(--found);
+  box-shadow: 0 0 24px #7fe3d433;
+}
+.guide-label {
+  font-size: 11px;
+  letter-spacing: 2px;
+  color: var(--goldDeep);
+}
+.guide-where {
+  font-family: Georgia, serif;
+  font-size: 22px;
+  margin: 4px 0 6px;
+  color: var(--paper);
+}
+.guide.ok .guide-where {
+  color: var(--found);
+}
+.guide-turn {
+  font-size: 14px;
+  color: var(--gold);
+  font-family: ui-monospace, monospace;
+}
+.guide.ok .guide-turn {
+  color: var(--found);
+}
+
 .stats {
   display: grid;
   grid-template-columns: 1fr 1fr 1fr;

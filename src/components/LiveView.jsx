@@ -1,6 +1,6 @@
 import { useState } from 'react'
 import { horiz, dir } from '../lib/astronomy'
-import { computeOverlay } from '../lib/compass'
+import { computeOverlay, guidance } from '../lib/compass'
 import { useAnimationFrame } from '../hooks/useAnimationFrame'
 import { CompassView } from './CompassView'
 import { Stats } from './Stats'
@@ -61,6 +61,23 @@ export function LiveView({ geo, orient, camera }) {
         videoRef={camera.videoRef}
         camOn={camera.on}
       />
+
+      {(() => {
+        const g = guidance({
+          target,
+          dAz: overlay.dAz,
+          dAlt: overlay.dAlt,
+          aligned: overlay.aligned,
+        })
+        if (!g) return null
+        return (
+          <div className={'guide' + (overlay.aligned ? ' ok' : '')}>
+            <div className="guide-label">银河中心现在位于</div>
+            <div className="guide-where">{g.where}</div>
+            {g.turn && <div className="guide-turn">{g.turn}</div>}
+          </div>
+        )
+      })()}
 
       <Stats target={target} heading={orient.heading} />
 

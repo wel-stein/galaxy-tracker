@@ -1,7 +1,30 @@
-import { AZ_TOL, ALT_TOL, FOV, RAD, clamp, n180 } from './astronomy'
+import { AZ_TOL, ALT_TOL, FOV, RAD, clamp, n180, dir } from './astronomy'
 
 export const ALIGNED_COLOR = '#7fe3d4'
 export const SEEKING_COLOR = '#ffce6b'
+
+// Plain-language description of where the Galactic Center is and how to aim at
+// it, so the user understands the position instead of just seeing an arrow.
+export function guidance({ target, dAz, dAlt, aligned }) {
+  if (!target) return null
+  const above = target.alt > 0
+  const altTxt = above
+    ? `地平线上 ${target.alt.toFixed(0)}°`
+    : `地平线下 ${Math.abs(target.alt).toFixed(0)}°`
+  const level = !above ? '看不到' : target.alt < 20 ? '偏低' : target.alt > 50 ? '很高' : '适中'
+  const where = `${dir(target.az)}方 · ${altTxt} · ${level}`
+
+  let turn = null
+  if (aligned) {
+    turn = '已对准 ✦ 就在你正前方'
+  } else if (dAz != null && dAlt != null) {
+    const parts = []
+    if (Math.abs(dAz) >= 4) parts.push(`向${dAz > 0 ? '右' : '左'}转 ${Math.abs(dAz).toFixed(0)}°`)
+    if (Math.abs(dAlt) >= 4) parts.push(`${dAlt > 0 ? '抬高' : '放低'} ${Math.abs(dAlt).toFixed(0)}°`)
+    turn = parts.length ? parts.join(' · ') : '基本对准,微调即可'
+  }
+  return { where, turn, above }
+}
 
 // Direction hint ("上"/"下"/"左"/"右") toward the target when it is far off.
 export function hint(dAz, dAlt) {

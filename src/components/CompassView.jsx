@@ -39,22 +39,36 @@ export function CompassView({ overlay, aligned, videoRef, camOn }) {
               boxShadow: '0 0 14px ' + marker.color,
             }}
           />
+          <div
+            className="marker-label"
+            style={{ left: marker.px + '%', top: marker.py + '%', color: marker.color }}
+          >
+            银心
+          </div>
         </>
       )}
 
       {marker && marker.off && (
-        <div
-          className="arrow"
-          style={{
-            left: marker.px + '%',
-            top: marker.py + '%',
-            color: marker.color,
-            filter: 'drop-shadow(0 0 8px ' + marker.color + ')',
-            transform: `translate(-50%,-50%) rotate(${marker.angle}deg)`,
-          }}
-        >
-          ➤
-        </div>
+        <>
+          <div
+            className="arrow"
+            style={{
+              left: marker.px + '%',
+              top: marker.py + '%',
+              color: marker.color,
+              filter: 'drop-shadow(0 0 8px ' + marker.color + ')',
+              transform: `translate(-50%,-50%) rotate(${marker.angle}deg)`,
+            }}
+          >
+            ➤
+          </div>
+          <div
+            className="marker-label"
+            style={{ left: marker.px + '%', top: marker.py + '%', color: marker.color }}
+          >
+            银心在此方向
+          </div>
+        </>
       )}
 
       <div className={'status' + (aligned ? ' ok' : '')}>
